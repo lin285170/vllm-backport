@@ -511,6 +511,12 @@ class DSparkDeepseekV4ForCausalLM(nn.Module):
                     params_dict[name][: narrow.shape[0]].copy_(narrow)
                     loaded_params.add(name)
                     continue
+                if name.endswith(".ffn.gate.bias_vl"):
+                    # Vision-Exp checkpoints ship a per-layer vision expert
+                    # bias (also on the mtp layers); the text-only dspark
+                    # draft does not own these parameters. Mirror the target
+                    # model's vision_skip mapper and drop them.
+                    continue
                 if name.endswith(".ffn.gate.bias"):
                     name = name.replace(
                         ".ffn.gate.bias", ".ffn.gate.e_score_correction_bias"
