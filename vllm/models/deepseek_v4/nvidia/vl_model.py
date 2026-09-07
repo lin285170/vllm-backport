@@ -301,19 +301,18 @@ class DeepseekV4ForConditionalGeneration(
         # Map HF names into this wrapper's namespace up front and sort, so
         # the "language_model." group reaches the child loader as one
         # contiguous block (AutoWeightsLoader delegates per contiguous group,
-        # and the child's load_weights finalizes fused expert weights, which
-        # must not run on a partially loaded model).
+        # and the finalization in the backbone's post-load hook must not run
+        # on a partially loaded model).
         mapped = sorted(self.hf_to_vllm_mapper.apply(weights), key=lambda x: x[0])
         loader = AutoWeightsLoader(self)
         loaded_params = loader.load_weights(mapped)
-        # The child's load_weights already ran its post-load finalization.
-        self._weights_finalized = True
         return loaded_params
 
     def process_weights_after_loading(self) -> None:
         # Model-level post-load hook (called by the loader after any load
-        # format). Under DummyModelLoader the child's load_weights — and
-        # hence its finalize step — is bypassed, so run it here instead.
-        if getattr(self, "_weights_finalized", False):
-            return
+        # format). NOTE(port): unlike the reference implementation, this
+        # backported text backbone does NOT self-finalize at the end of its
+        # load_weights — the engine only calls this hook on the top-level
+        # model, so always run the backbone's finalization here exactly once
+        # (finalize mega-MoE, first-layer MHC broadcast, input-GEMM fusion).
         self.language_model.process_weights_after_loading()
