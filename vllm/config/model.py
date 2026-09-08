@@ -693,7 +693,15 @@ class ModelConfig:
                 self.tokenizer_mode = "kimi_k3"
             elif arch == "DeepseekV32ForCausalLM":
                 self.tokenizer_mode = "deepseek_v32"
-            elif arch == "DeepseekV4ForCausalLM":
+            elif arch in (
+                "DeepseekV4ForCausalLM",
+                "DeepseekV4ForConditionalGeneration",
+            ):
+                # The vision variant resolves to the VL wrapper after the
+                # arch convertor reroutes vision-tower configs; it uses the
+                # same deepseek_v4 tokenizer (prompt encoding + image
+                # placeholder rendering), and the checkpoints ship no chat
+                # template.
                 self.tokenizer_mode = "deepseek_v4"
             elif arch in ("InklingForCausalLM", "InklingForConditionalGeneration"):
                 self.tokenizer_mode = "inkling"
